@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Schedule and Academic Management System</title>
+<style>
+/* MEMBER 2 - User Interface: layout, colors, forms, tables */
+:root{--g:#1b6b3a;--g2:#e7f4ec;--red:#c0392b;--ink:#1f2933;--bd:#d5dde3}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,'Segoe UI',Arial,sans-serif;color:var(--ink);background:#f4f7f6}
+header{background:var(--g);color:#fff;padding:14px 20px}
+header h1{margin:0;font-size:1.2rem}header small{opacity:.85}
+nav{display:flex;flex-wrap:wrap;gap:6px;background:#fff;padding:8px 20px;border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:5}
+.btn,nav button{border:1px solid var(--g);background:#fff;color:var(--g);padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.9rem}
+nav button.on,.btn.p{background:var(--g);color:#fff}
+.btn.d{border-color:var(--red);color:var(--red)}
+.sp{flex:1}
+main{max-width:1000px;margin:auto;padding:18px}
+.view{display:none}.view.on{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px}
+.card h3{margin:0 0 8px}
+.stat{margin:0;text-align:center}.stat b{display:block;font-size:1.6rem;color:var(--g)}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+label{font-size:.8rem;font-weight:600;display:flex;flex-direction:column;gap:4px}
+input,select{padding:8px;border:1px solid var(--bd);border-radius:6px;font-size:.9rem}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--bd)}th{background:var(--g2)}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.75rem;background:var(--g2);color:var(--g)}
+.tag.r{background:#fde8e6;color:var(--red)}.tag.y{background:#fff3d6;color:#8a6100}
+.bar{height:10px;background:var(--g);border-radius:5px;margin:4px 0 8px}
+.warn{border-left:5px solid var(--red)}.ok{border-left:5px solid var(--g)}
+.done{text-decoration:line-through;opacity:.6}
+#toast{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:9}
+#toast div{background:var(--g);color:#fff;padding:10px 14px;border-radius:8px;max-width:300px;box-shadow:0 2px 8px #0003}
+#toast .e{background:var(--red)}#toast .w{background:#8a6100}
+@media(max-width:600px){main{padding:10px}nav{padding:8px 10px}}
+</style>
+</head>
+<body>
+<header><h1>Student Schedule and Academic Management System</h1><small>Working prototype - Activity No. 3 - sample (fictional) data only</small></header>
+<nav>
+  <button data-v="dash" class="on">Dashboard</button><button data-v="sched">My Schedule</button>
+  <button data-v="ana">Analysis</button><button data-v="plan">Study Planner</button><span class="sp"></span>
+  <button class="btn" id="sample">Load Sample Data</button><button class="btn d" id="reset">Reset</button>
+</nav>
+<main>
+  <!-- Screen 1: Dashboard -->
+  <section id="dash" class="view on">
+    <div class="grid" id="stats"></div>
+    <div class="card"><h3>Today's Classes</h3><div id="today"></div></div>
+    <div class="card"><h3>Upcoming Deadlines</h3><div id="due"></div></div>
+  </section>
+  <!-- Screen 2: My Schedule (Function 1: Schedule Management) -->
+  <section id="sched" class="view">
+    <div class="card"><h3 id="fh">Add a Class</h3>
+      <form id="cf" novalidate>
+        <label>Subject<input id="subj"></label><label>Course code<input id="code"></label>
+        <label>Day<select id="day"></select></label><label>Start time<input id="st" type="time"></label>
+        <label>End time<input id="en" type="time"></label><label>Room<input id="room"></label>
+        <label>Instructor<input id="prof"></label>
+        <div><button class="btn p" type="submit">Save Class</button> <button class="btn" type="reset">Clear</button></div>
+      </form>
+    </div>
+    <div class="card tbl"><table>
+      <thead><tr><th>Day</th><th>Time</th><th>Subject</th><th>Room</th><th>Instructor</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="cl"></tbody></table></div>
+  </section>
+  <!-- Screen 3: Analysis (Function 2: Schedule Analysis and Conflict Detection) -->
+  <section id="ana" class="view"><div id="anaOut"></div></section>
+  <!-- Screen 4: Study Planner (Function 3: Academic Time Management) -->
+  <section id="plan" class="view">
+    <div class="card"><h3>Add a Task / Deadline</h3>
+      <form id="tf" novalidate>
+        <label>Task<input id="tt"></label><label>Subject<input id="ts"></label>
+        <label>Due date<input id="td" type="date"></label>
+        <label>Priority<select id="tp"><option>High</option><option selected>Medium</option><option>Low</option></select></label>
+        <div><button class="btn p" type="submit">Add Task</button></div>
+      </form>
+    </div>
+    <div class="card"><h3>My Tasks</h3><div id="tl"></div></div>
+    <div class="card"><h3>Suggested Study Slots (free time from your schedule)</h3><div id="sg"></div></div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],KEY="ssams_v1",PR={High:0,Medium:1,Low:2};
+const F={subject:"subj",code:"code",day:"day",start:"st",end:"en",room:"room",prof:"prof"};
+let S={classes:[],tasks:[]},editId=null;
+const $=id=>document.getElementById(id);
+const mins=t=>{const[h,m]=t.split(":").map(Number);return h*60+m};
+const hhmm=m=>{const h=Math.floor(m/60);return (h+11)%12+1+":"+String(m%60).padStart(2,"0")+(h>=12?" PM":" AM")};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function toast(msg,t=""){const d=document.createElement("div");d.className=t;d.textContent=msg;$("toast").append(d);setTimeout(()=>d.remove(),3500)}
+
+/* MEMBER 5 - Data storage: browser localStorage (key "ssams_v1"), saved as JSON */
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Could not save data in this browser.","e")}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&d.classes&&d.tasks)S=d}catch(e){}}
+function sample(){
+  const d=n=>{const x=new Date();x.setDate(x.getDate()+n);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
+  const C=(subject,code,day,start,end,room,prof)=>({id:uid(),subject,code,day,start,end,room,prof});
+  const T=(title,subject,due,pri)=>({id:uid(),title,subject,due:d(due),pri,done:false});
+  S={classes:[C("Programming 2","CS 201","Monday","08:00","11:00","Rm 301","Prof. Reyes"),
+    C("Data Structures","CS 202","Monday","10:00","12:00","Rm 305","Prof. Santos"),
+    C("Discrete Mathematics","MATH 210","Tuesday","13:00","16:00","Rm 204","Prof. Cruz"),
+    C("Information Management","CS 203","Wednesday","18:00","21:00","Lab 2","Prof. Garcia"),
+    C("Computer Networks","CS 204","Thursday","09:00","12:00","Lab 1","Prof. Lim"),
+    C("Technical Writing","ENG 101","Friday","14:00","17:00","Rm 102","Prof. Diaz")],
+    tasks:[T("Laboratory exercise 3","CS 201",2,"High"),T("Problem set 4","MATH 210",4,"Medium"),T("Database design report","CS 203",7,"High"),T("Reading: Chapter 5","ENG 101",1,"Low")]};
+  save();render();toast("Sample data loaded (fictional).");
+}
+
+/* MEMBER 3 - Core function 1: Schedule Management (add, edit, delete) + MEMBER 6 validation */
+$("cf").onsubmit=e=>{
+  e.preventDefault();
+  const c={};for(const k in F)c[k]=$(F[k]).value.trim();
+  if(!c.subject||!c.day||!c.start||!c.end)return toast("Please fill in the subject, day, start time and end time.","e");
+  if(mins(c.end)<=mins(c.start))return toast("End time must be later than the start time.","e");
+  if(S.classes.some(x=>x.id!==editId&&x.subject.toLowerCase()===c.subject.toLowerCase()&&x.day===c.day&&x.start===c.start))return toast("This class is already in your schedule.","e");
+  if(editId){Object.assign(S.classes.find(x=>x.id===editId),c);toast("Class updated.")}else{c.id=uid();S.classes.push(c);toast("Class added.")}
+  const id=editId||c.id;editId=null;$("cf").reset();$("fh").textContent="Add a Class";save();render();
+  const clash=S.classes.find(x=>x.id!==id&&x.day===c.day&&mins(x.start)<mins(c.end)&&mins(c.start)<mins(x.end));
+  if(clash)toast("Warning: this class overlaps with "+clash.subject+".","w");
+};
+$("cf").onreset=()=>{editId=null;$("fh").textContent="Add a Class"};
+$("cl").onclick=e=>{
+  const b=e.target.closest("button");if(!b)return;
+  const c=S.classes.find(x=>x.id===b.dataset.id);if(!c)return;
+  if(b.dataset.a==="del"){if(!confirm("Delete "+c.subject+"?"))return;S.classes=S.classes.filter(x=>x.id!==c.id);save();render();toast("Class deleted.")}
+  else{editId=c.id;for(const k in F)$(F[k]).value=c[k];$("fh").textContent="Edit Class";window.scrollTo(0,0)}
+};
+
+/* MEMBER 4 - Core function 2: Schedule Analysis and Conflict Detection */
+function conflicts(){const o=[];for(let i=0;i<S.classes.length;i++)for(let j=i+1;j<S.classes.length;j++){const a=S.classes[i],b=S.classes[j];if(a.day===b.day&&mins(a.start)<mins(b.end)&&mins(b.start)<mins(a.end))o.push([a,b])}return o}
+const night=()=>S.classes.filter(c=>mins(c.end)>18*60);
+const hours=d=>S.classes.filter(c=>c.day===d).reduce((n,c)=>n+mins(c.end)-mins(c.start),0)/60;
+function gaps(d){const cs=S.classes.filter(c=>c.day===d).sort((a,b)=>mins(a.start)-mins(b.start));let t=420;const g=[];for(const c of cs){if(mins(c.start)-t>=60)g.push([t,mins(c.start)]);t=Math.max(t,mins(c.end))}if(1260-t>=60)g.push([t,1260]);return g}
+const range=c=>hhmm(mins(c.start))+" - "+hhmm(mins(c.end));
+function renderAna(){
+  if(!S.classes.length){$("anaOut").innerHTML='<div class="card">Add classes or load the sample data to see the analysis.</div>';return}
+  const cf=conflicts(),nt=night(),hs=DAYS.map(hours),mx=Math.max(...hs,1);
+  let h='<div class="card '+(cf.length?"warn":"ok")+'"><h3>Schedule Conflicts</h3>'+(cf.length?cf.map(p=>`<p><span class="tag r">${p[0].day}</span> ${esc(p[0].subject)} (${range(p[0])}) overlaps with ${esc(p[1].subject)} (${range(p[1])})</p>`).join(""):"<p>No conflicts found.</p>")+"</div>";
+  h+='<div class="card"><h3>Night Classes (ending after 6:00 PM)</h3>'+(nt.length?nt.map(c=>`<p><span class="tag y">${c.day}</span> ${esc(c.subject)} ends at ${hhmm(mins(c.end))}. Plan your travel and rest.</p>`).join(""):"<p>No night classes.</p>")+"</div>";
+  h+='<div class="card"><h3>Workload per Day</h3>'+DAYS.map((d,i)=>`<div>${d}: ${hs[i].toFixed(1)} h<div class="bar" style="width:${hs[i]/mx*100}%"></div></div>`).join("")+"<p><b>Heaviest day:</b> "+DAYS[hs.indexOf(Math.max(...hs))]+"</p></div>";
+  h+='<div class="card"><h3>Free Time (1 hour or more, 7:00 AM - 9:00 PM)</h3>'+DAYS.map(d=>{const g=gaps(d);return "<p><b>"+d+":</b> "+(g.length?g.map(x=>hhmm(x[0])+" - "+hhmm(x[1])).join(", "):"none")+"</p>"}).join("")+"</div>";
+  $("anaOut").innerHTML=h;
+}
+
+/* MEMBER 3 and 4 - Core function 3: Academic Time Management (tasks, deadlines, study slots) */
+const left=t=>Math.round((new Date(t.due+"T00:00")-new Date(new Date().toDateString()))/864e5);
+const dueTag=t=>{const n=left(t);return n<0?`<span class="tag r">Overdue ${-n}d</span>`:n===0?'<span class="tag r">Due today</span>':`<span class="tag ${n<=2?"y":""}">${n} day${n>1?"s":""} left</span>`};
+$("tf").onsubmit=e=>{
+  e.preventDefault();
+  const t={id:uid(),title:$("tt").value.trim(),subject:$("ts").value.trim(),due:$("td").value,pri:$("tp").value,done:false};
+  if(!t.title||!t.due)return toast("Please enter a task title and a due date.","e");
+  S.tasks.push(t);$("tf").reset();save();render();toast("Task added.");
+};
+$("tl").onclick=e=>{
+  const b=e.target.closest("[data-a]");if(!b)return;
+  const t=S.tasks.find(x=>x.id===b.dataset.id);if(!t)return;
+  if(b.dataset.a==="tog")t.done=b.checked;else S.tasks=S.tasks.filter(x=>x.id!==t.id);
+  save();render();
+};
+function renderTasks(){
+  const all=[...S.tasks].sort((a,b)=>a.done-b.done||a.due.localeCompare(b.due));
+  $("tl").innerHTML=all.length?all.map(t=>`<p class="${t.done?"done":""}"><input type="checkbox" data-a="tog" data-id="${t.id}" ${t.done?"checked":""}> <b>${esc(t.title)}</b> <small>${esc(t.subject)}</small> <span class="tag">${t.pri}</span> ${t.done?"":dueTag(t)} <button class="btn d" data-a="del" data-id="${t.id}">Delete</button></p>`).join(""):"<p>No tasks yet.</p>";
+  const slots=DAYS.flatMap(d=>gaps(d).map(g=>[d,g[0]])),pend=S.tasks.filter(t=>!t.done).sort((a,b)=>a.due.localeCompare(b.due)||PR[a.pri]-PR[b.pri]);
+  const rows=pend.slice(0,slots.length).map((t,i)=>`<p>${esc(t.title)} &rarr; <b>${slots[i][0]}, ${hhmm(slots[i][1])} - ${hhmm(slots[i][1]+60)}</b></p>`).join("");
+  $("sg").innerHTML=!S.classes.length?"<p>Add your classes first so free time can be found.</p>":!pend.length?"<p>No pending tasks to schedule.</p>":rows||"<p>No free slots found.</p>";
+}
+
+/* MEMBER 1 - Integration: dashboard, navigation, start-up */
+function renderStats(){
+  const h=DAYS.reduce((n,d)=>n+hours(d),0),it=[["Classes",S.classes.length],["Hours per week",h.toFixed(1)],["Conflicts",conflicts().length],["Night classes",night().length],["Pending tasks",S.tasks.filter(t=>!t.done).length]];
+  $("stats").innerHTML=it.map(i=>`<div class="card stat"><b>${i[1]}</b>${i[0]}</div>`).join("");
+  const td=S.classes.filter(c=>c.day===DAYS[(new Date().getDay()+6)%7]).sort((a,b)=>mins(a.start)-mins(b.start));
+  $("today").innerHTML=td.length?td.map(c=>`<p><span class="tag">${range(c)}</span> ${esc(c.subject)} <small>${esc(c.room)}</small></p>`).join(""):"<p>No classes scheduled for today.</p>";
+  const up=S.tasks.filter(t=>!t.done).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,5);
+  $("due").innerHTML=up.length?up.map(t=>`<p>${dueTag(t)} ${esc(t.title)}</p>`).join(""):"<p>No pending tasks.</p>";
+}
+function renderClasses(){
+  const bad=new Set(conflicts().flat().map(c=>c.id)),rows=[...S.classes].sort((a,b)=>DAYS.indexOf(a.day)-DAYS.indexOf(b.day)||mins(a.start)-mins(b.start));
+  $("cl").innerHTML=rows.length?rows.map(c=>`<tr><td>${c.day}</td><td>${range(c)}</td><td>${esc(c.subject)} <small>${esc(c.code)}</small></td><td>${esc(c.room)}</td><td>${esc(c.prof)}</td><td>${bad.has(c.id)?'<span class="tag r">Conflict</span> ':""}${mins(c.end)>1080?'<span class="tag y">Night</span>':""}</td><td><button class="btn" data-a="edit" data-id="${c.id}">Edit</button> <button class="btn d" data-a="del" data-id="${c.id}">Delete</button></td></tr>`).join(""):'<tr><td colspan="7">No classes yet. Add one above or load the sample data.</td></tr>';
+}
+function render(){renderStats();renderClasses();renderAna();renderTasks()}
+document.querySelectorAll("nav [data-v]").forEach(b=>b.onclick=()=>{document.querySelectorAll(".view,nav [data-v]").forEach(x=>x.classList.remove("on"));$(b.dataset.v).classList.add("on");b.classList.add("on")});
+$("sample").onclick=sample;
+$("reset").onclick=()=>{if(confirm("Delete all saved data?")){S={classes:[],tasks:[]};save();render();toast("All data cleared.")}};
+$("day").innerHTML='<option value="">Select day</option>'+DAYS.map(d=>`<option>${d}</option>`).join("");
+load();render();
+</script>
+</body>
+</html>
